@@ -1,0 +1,102 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation Template cfnLambdaTrigger
+  
+Resources:
+  ########################################## S3 Bucket for Lambda Code ##########################################
+  LambdaCodeS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - "-"
+        - - "cloudformation-lambda-trigger"
+          - !Select
+            - 0
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - "/"
+                  - !Ref "AWS::StackId"
+      AccessControl: Private  # Restrict access to the bucket
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256  # Enable server-side encryption with AES256
+      VersioningConfiguration:
+        Status: Enabled  # Enable versioning for the bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+      LoggingConfiguration:
+        DestinationBucketName: !Ref LambdaLogsS3Bucket
+        LogFilePrefix: logs/
+
+  # Bucket Policy for LambdaCodeS3Bucket
+  LambdaCodeS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LambdaCodeS3Bucket
+      PolicyDocument:
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${LambdaCodeS3Bucket}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": false
+
+  ########################################## S3 Bucket for Logs ##########################################
+  LambdaLogsS3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Join
+        - "-"
+        - - "lambda-logs"
+          - !Select
+            - 0
+            - !Split
+              - "-"
+              - !Select
+                - 2
+                - !Split
+                  - "/"
+                  - !Ref "AWS::StackId"
+      AccessControl: Private  # Restrict access to the bucket
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256  # Enable server-side encryption with AES256
+      VersioningConfiguration:
+        Status: Enabled  # Enable versioning for the bucket
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
+
+  # Bucket Policy for LambdaLogsS3Bucket
+  LambdaLogsS3BucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref LambdaLogsS3Bucket
+      PolicyDocument:
+        Statement:
+          - Effect: Deny
+            Principal: "*"
+            Action: s3:GetObject
+            Resource: !Sub "arn:aws:s3:::${LambdaLogsS3Bucket}/*"
+            Condition:
+              Bool:
+                "aws:SecureTransport": false
+        
+
+Outputs:
+  LambdaCodeS3BucketName:
+    Value: !Ref LambdaCodeS3Bucket
+    Description: Name of the created Lambda S3 bucket
+    Export:
+      Name: LambdaCodeS3BucketName

@@ -1,0 +1,95 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: CloudFormation Template cfnLambdaTrigger
+
+Resources:
+  ########################################## Lambda to be triggered ##########################################
+  LambdaHelloWorldLambdaRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: lambda-logging-policy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: 
+                  - !Sub "arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/LambdaHelloWorld:*"
+
+  LambdaHelloWorld:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: "LambdaHelloWorld"
+      Role: !GetAtt LambdaHelloWorldLambdaRole.Arn
+      Runtime: python3.11
+      Handler: helloWorld.lambda_handler
+      Timeout: 30
+      ReservedConcurrentExecutions: 1
+      Code:
+        S3Bucket: !ImportValue LambdaCodeS3BucketName
+        S3Key: "helloWorld.zip" 
+
+  ########################################## Custom Event Lambda Invoker ##########################################
+  CustomLambdaInvokerLambdaTriggerRole:
+    Type: "AWS::IAM::Role"
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: "Allow"
+            Principal:
+              Service:
+                - "lambda.amazonaws.com"
+            Action:
+              - "sts:AssumeRole"
+      Path: "/"
+      Policies:
+        - PolicyName: "InvokeLambdaPolicy"
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: "Allow"
+                Action: "lambda:InvokeFunction"
+                Resource: !GetAtt LambdaHelloWorld.Arn
+
+  CustomLambdaInvokerLambdaTrigger:
+    Type: AWS::Lambda::Function
+    DependsOn: LambdaHelloWorld
+    Properties:
+      FunctionName: "CustomLambdaInvokerLambdaTrigger"
+      Role: !GetAtt CustomLambdaInvokerLambdaTriggerRole.Arn
+      Runtime: python3.11
+      Handler: customLambdaInvokerTrigger.lambda_handler
+      Timeout: 30
+      ReservedConcurrentExecutions: 1
+      Code:
+        S3Bucket: !ImportValue LambdaCodeS3BucketName
+        S3Key: "customLambdaInvokerTrigger.zip" 
+
+  CustomLambdaInvokerCustomResource:
+    Type: AWS::CloudFormation::CustomResource
+    DependsOn: CustomLambdaInvokerLambdaTrigger
+    Version: "1.0"
+    Properties:
+      ServiceToken: !GetAtt CustomLambdaInvokerLambdaTrigger.Arn
+
+# Additional information about attempted lambda invoke
+Outputs:
+  InvokedLambdaResponse:
+    Value: !GetAtt CustomLambdaInvokerCustomResource.InvokedLambdaResponse # Adjust this line to match your desired attribute
+    Description: The response from the boto3 invoke lambda command in customLambdaInvokerTrigger.py
+    Export:
+      Name: InvokedLambdaResponse
