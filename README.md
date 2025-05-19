@@ -18,7 +18,7 @@ If you want the Custom Resource to wait for successful completion of a Lambda fu
 * [AWS Identity and Access Management (IAM)](https://docs.aws.amazon.com/IAM/latest/UserGuide/introduction.html)
 
 ### Target Architecture
-![alt text](https://github.com/2018-lonely-droid/cfn-trigger-lambda/blob/[branch]/image.jpg?raw=true)
+![alt text](https://github.com/2018-lonely-droid/cfn-trigger-lambda/blob/main/diagram.png?raw=true)
 
 There are two CloudFormation YAML files used to deploy this pattern. The first, `lambdaCodeS3BucketCreate.yaml`, creates an S3 bucket to house the lmabda code. The second, `cfnLambdaTrigger.yaml` deploys the Custom Resource and the a `helloWorld` lambda funtion that represents creating or configuring CloudFormation configurable resource.
 
